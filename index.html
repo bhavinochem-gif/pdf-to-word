@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to Editable Word Converter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>PDF to Editable Word Converter</h1>
+        <p class="subtitle">Optimized for high-fidelity vector layouts & chemical structures</p>
+
+        <!-- API Configuration Panel -->
+        <div class="api-box">
+            <label for="apiKey">Convertio API Key:</label>
+            <input type="password" id="apiKey" placeholder="Paste your free Convertio API key here">
+            <span class="hint">Your key is processed completely in your browser and is never stored on a server.</span>
+        </div>
+
+        <!-- File Drag and Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+            <p>Drag & Drop your PDF file here</p>
+            <span>or</span>
+            <input type="file" id="fileInput" accept=".pdf" hidden>
+            <button class="btn-select" id="selectBtn">Browse File</button>
+            <div id="fileNameDisplay" class="file-name"></div>
+        </div>
+
+        <!-- Action Button -->
+        <button class="btn-convert" id="convertBtn" disabled>Convert to Word (.docx)</button>
+
+        <!-- Status Panel -->
+        <div class="status-box" id="statusBox" style="display: none;">
+            <div class="spinner" id="spinner"></div>
+            <p id="statusText">Preparing file...</p>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const selectBtn = document.getElementById('selectBtn');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const convertBtn = document.getElementById('convertBtn');
+        const statusBox = document.getElementById('statusBox');
+        const statusText = document.getElementById('statusText');
+        const progressBar = document.getElementById('progressBar');
+        const spinner = document.getElementById('spinner');
+        const apiKeyInput = document.getElementById('apiKey');
+
+        let selectedFile = null;
+
+        // Load saved API key if available
+        if (localStorage.getItem('convertio_key')) {
+            apiKeyInput.value = localStorage.getItem('convertio_key');
+        }
+
+        // Handle File Selection
+        selectBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            if (file && file.type === "application/pdf") {
+                selectedFile = file;
+                fileNameDisplay.textContent = `Selected: ${file.name}`;
+                convertBtn.disabled = false;
+            } else {
+                alert("Please drop a valid PDF file.");
+            }
+        }
+
+        // Conversion Engine Hook
+        convertBtn.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) return alert("Please enter your Convertio API Key first.");
+            
+            // Persist key locally in user's browser storage for convenience
+            localStorage.setItem('convertio_key', apiKey);
+
+            // UI Feedback state
+            convertBtn.disabled = true;
+            statusBox.style.display = 'block';
+            spinner.style.display = 'block';
+            progressBar.style.width = '0%';
+            
+            try {
+                updateStatus("Encoding PDF file...", 10);
+                const base64File = await fileToBase64(selectedFile);
+
+                updateStatus("Sending to Convertio engine...", 25);
+                const initResponse = await fetch('https://convertio.co', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        apikey: apiKey,
+                        input: 'base64',
+                        file: base64File,
+                        filename: selectedFile.name,
+                        outputformat: 'docx'
+                    })
+                });
+
+                const initData = await initResponse.json();
+                if (initData.status !== 'ok') throw new Error(initData.error || "Initialization failed.");
+
+                const conversionId = initData.data.id;
+                let isCompleted = false;
+                let downloadUrl = '';
+
+                // Long-polling server updates
+                while (!isCompleted) {
+                    await new Promise(r => setTimeout(r, 4000));
+                    
+                    const statusResponse = await fetch(`https://convertio.co/${conversionId}/status`);
+                    const statusData = await statusResponse.json();
+                    if (statusData.status !== 'ok') throw new Error(statusData.error);
+
+                    const step = statusData.data.step;
+                    const percent = statusData.data.step_percent || 40;
+                    
+                    updateStatus(`Processing layout: Step (${step})...`, Math.min(percent, 90));
+
+                    if (step === 'finish') {
+                        isCompleted = true;
+                        downloadUrl = statusData.data.output.url;
+                    } else if (step === 'error') {
+                        throw new Error(statusData.data.error || "Conversion failure.");
+                    }
+                }
+
+                updateStatus("Downloading editable Word document...", 95);
+                const fileResponse = await fetch(downloadUrl);
+                const blob = await fileResponse.blob();
+                
+                // Trigger client-side direct file download save
+                const downloadLink = document.createElement('a');
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.download = selectedFile.name.replace('.pdf', '.docx');
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+
+                updateStatus("Conversion Complete! File downloaded.", 100);
+                spinner.style.display = 'none';
+
+            } catch (err) {
+                console.error(err);
+                updateStatus(`Error: ${err.message}`, 0);
+                spinner.style.display = 'none';
+            } finally {
+                convertBtn.disabled = false;
+            }
+        });
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function updateStatus(text, percentage) {
+            statusText.textContent = text;
+            progressBar.style.width = `${percentage}%`;
+        }
+    </script>
+</body>
+</html>
