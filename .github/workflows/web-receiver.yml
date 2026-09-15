@@ -1,0 +1,36 @@
+name: Web App Automated Pipeline Receiver
+
+on:
+  repository_dispatch:
+    types: [client_web_upload]
+
+jobs:
+  process-web-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Base
+        uses: actions/checkout@v4
+
+      - name: Write Binary Stream to Input Folder
+        run: |
+          mkdir -p input
+          mkdir -p output
+          echo "${{ github.event.client_payload.filedata }}" | base64 --decode > "input/${{ github.event.client_payload.filename }}"
+
+      - name: Setup Runner Engine
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Execute Server Side Convertio Engine
+        env:
+          CONVERTIO_API_KEY: ${{ secrets.CONVERTIO_API_KEY }}
+        run: node scripts/convert.js
+
+      - name: Save Document Back to Repository Output
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@://github.com"
+          git add output/*.docx
+          git commit -m "Automated Portal Output: Generated docx wrapper" || exit 0
+          git push
