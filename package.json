@@ -1,7 +1,6 @@
 {
   "name": "pdf-to-chemdraw-docx",
   "version": "1.0.0",
-  "dependencies": {
-    "convertapi": "^1.1.4"
-  }
+  "description": "Convert chemical PDFs to editable Word using Convertio free tier",
+  "main": "scripts/convert.js"
 }
