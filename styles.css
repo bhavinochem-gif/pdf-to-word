@@ -1,0 +1,51 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #f5f7fb;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+.container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+}
+h1 { font-size: 24px; color: #1e293b; margin-bottom: 5px; }
+.subtitle { font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 25px; }
+.api-box {
+    text-align: left;
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+}
+.api-box label { font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 6px; }
+.api-box input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+.hint { font-size: 11px; color: #94a3b8; display: block; margin-top: 5px; }
+.drop-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 30px;
+    background: #fdfdfd;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.drop-zone.dragover { border-color: #3b82f6; background: #eff6ff; }
+.btn-select { background: #e2e8f0; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: 500; }
+.file-name { margin-top: 12px; font-size: 13px; font-weight: 600; color: #16a34a; }
+.btn-convert { width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 20px; transition: background 0.2s; }
+.btn-convert:disabled { background: #cbd5e1; cursor: not-allowed; }
+.status-box { margin-top: 20px; text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px; }
+#statusText { font-size: 13px; font-weight: 500; color: #334155; margin: 0 0 10px 0; }
+.progress-bar-container { background: #e2e8f0; height: 6px; border-radius: 3px; overflow: hidden; }
+.progress-bar { background: #3b82f6; height: 100%; width: 0%; transition: width 0.3s; }
+.spinner { width: 20px; height: 20px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; float: right; }
+@keyframes spin { to { transform: rotate(360deg); } }
